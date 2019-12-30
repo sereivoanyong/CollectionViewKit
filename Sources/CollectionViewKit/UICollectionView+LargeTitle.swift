@@ -15,6 +15,13 @@ extension CGFloat {
   }
 }
 
+extension UIEdgeInsets {
+  
+  static func + (lhs: UIEdgeInsets, rhs: UIEdgeInsets) -> UIEdgeInsets {
+    return UIEdgeInsets(top: lhs.top + rhs.top, left: lhs.left + rhs.left, bottom: lhs.bottom + rhs.bottom, right: lhs.right + rhs.right)
+  }
+}
+
 open class CollectionLargeTitleHeaderView: UICollectionReusableView {
   
   public static var titleFont: UIFont?

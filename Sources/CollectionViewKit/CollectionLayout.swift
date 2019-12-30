@@ -17,10 +17,3 @@ public struct CollectionLayoutSize {
     self.heightDimension = heightDimension
   }
 }
-
-public enum CollectionLayoutInsetReference {
-  
-  case fromContentInset
-  case fromSafeArea
-  case fromLayoutMargins
-}

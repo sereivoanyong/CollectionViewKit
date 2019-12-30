@@ -2,14 +2,17 @@ import UIKit
 
 extension UICollectionReusableView {
   
-  @inlinable final public var layoutAttributes: UICollectionViewLayoutAttributes? {
-    return value(forKey: "_layoutAttributes") as? UICollectionViewLayoutAttributes
+  final weak public var collectionView: UICollectionView? {
+    return value(forKey: "_collectionView") as? UICollectionView
   }
 }
 
 open class CollectionViewCell: UICollectionViewCell {
   
-  open var layoutInsetReference: CollectionLayoutInsetReference = .fromContentInset
+  @objc open class var _contentViewClass: UIView.Type {
+    return UIView.self
+  }
+  
   open var layoutSize: CollectionLayoutSize = CollectionLayoutSize(widthDimension: .estimated, heightDimension: .estimated)
   
   public override init(frame: CGRect) {
@@ -34,79 +37,61 @@ open class CollectionViewCell: UICollectionViewCell {
     ])
   }
   
-  open override func systemLayoutSizeFitting(_ targetSize: CGSize, withHorizontalFittingPriority horizontalFittingPriority: UILayoutPriority, verticalFittingPriority: UILayoutPriority) -> CGSize {
-    let collectionView = superview as? UICollectionView ?? value(forKey: "collectionView") as! UICollectionView
-    var parentLayoutSize = Lazy<CGSize>(wrappedValue: {
-      switch layoutInsetReference {
+  open override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+    let layoutAttributes = super.preferredLayoutAttributesFitting(layoutAttributes)
+    guard let collectionView = collectionView, let flowLayout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout else {
+      return layoutAttributes
+    }
+    let section = layoutAttributes.indexPath.section
+    let parentSize: CGSize
+    do {
+      var sectionInset = (collectionView.delegate as? UICollectionViewDelegateFlowLayout)?.collectionView?(collectionView, layout: flowLayout, insetForSectionAt: section) ?? flowLayout.sectionInset
+      switch flowLayout.sectionInsetReference {
       case .fromContentInset:
-        return collectionView.bounds.inset(by: collectionView.contentInset).size
+        sectionInset = sectionInset + collectionView.contentInset
       case .fromSafeArea:
-        return collectionView.bounds.inset(by: collectionView.safeAreaInsets).size
+        sectionInset = sectionInset + collectionView.safeAreaInsets
       case .fromLayoutMargins:
-        return collectionView.bounds.inset(by: collectionView.layoutMargins).size
+        sectionInset = sectionInset + collectionView.layoutMargins
+      @unknown default:
+        break
       }
-    }())
-    var estimatedSize = Lazy<CGSize>(wrappedValue: {
-      let targetView = contentView
-      return targetView.systemLayoutSizeFitting(CGSize(width: targetSize.width, height: .greatestFiniteMagnitude), withHorizontalFittingPriority: horizontalFittingPriority, verticalFittingPriority: verticalFittingPriority)
-    }())
+      parentSize = collectionView.bounds.inset(by: sectionInset).size
+    }
+    var lastEstimatedSize: CGSize?
     let width: CGFloat
     switch layoutSize.widthDimension {
     case .fractional(let value):
       let itemsPerRow = Int(1 / value)
       if itemsPerRow > 1 {
-        let flowLayout = collectionView.collectionViewLayout as! UICollectionViewFlowLayout
-        let minimumInteritemSpacing = (collectionView.delegate as? UICollectionViewDelegateFlowLayout)?.collectionView?(collectionView, layout: flowLayout, minimumInteritemSpacingForSectionAt: layoutAttributes!.indexPath.section) ?? flowLayout.minimumInteritemSpacing
-        width = floor((parentLayoutSize.wrappedValue.width - minimumInteritemSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
+        let minimumInteritemSpacing = (collectionView.delegate as? UICollectionViewDelegateFlowLayout)?.collectionView?(collectionView, layout: flowLayout, minimumInteritemSpacingForSectionAt: section) ?? flowLayout.minimumInteritemSpacing
+        width = ((parentSize.width - minimumInteritemSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow)).flooredToScreenScale
       } else {
-        width = parentLayoutSize.wrappedValue.width * value
+        width = parentSize.width * value
       }
     case .absolute(let value):
       width = value
     case .estimated:
-      width = estimatedSize.wrappedValue.width
+      let estimatedSize = contentView.systemLayoutSizeFitting(CGSize(width: parentSize.width, height: .greatestFiniteMagnitude))
+      lastEstimatedSize = estimatedSize
+      width = estimatedSize.width
     }
+    
     let height: CGFloat
     switch layoutSize.heightDimension {
     case .fractional(let value):
-      height = parentLayoutSize.wrappedValue.height * value
-      
+      height = parentSize.height * value
     case .absolute(let value):
       height = value
-      
     case .estimated:
-      if targetSize.width != width {
-        height = contentView.systemLayoutSizeFitting(CGSize(width: width, height: .greatestFiniteMagnitude), withHorizontalFittingPriority: horizontalFittingPriority, verticalFittingPriority: verticalFittingPriority).height
+      if let lastEstimatedSize = lastEstimatedSize {
+        height = lastEstimatedSize.height
       } else {
-        height = estimatedSize.wrappedValue.height
+        height = contentView.systemLayoutSizeFitting(CGSize(width: width, height: .greatestFiniteMagnitude)).height
       }
     }
-    return CGSize(width: width, height: height)
-  }
-}
-
-private enum Lazy<Value> {
-  
-  case uninitialized(() -> Value)
-  case initialized(Value)
-
-  init(wrappedValue: @autoclosure @escaping () -> Value) {
-    self = .uninitialized(wrappedValue)
-  }
-
-  var wrappedValue: Value {
-    mutating get {
-      switch self {
-      case .uninitialized(let initializer):
-        let value = initializer()
-        self = .initialized(value)
-        return value
-      case .initialized(let value):
-        return value
-      }
-    }
-    set {
-      self = .initialized(newValue)
-    }
+    layoutAttributes.frame.size = CGSize(width: width, height: height)
+    
+    return layoutAttributes
   }
 }
