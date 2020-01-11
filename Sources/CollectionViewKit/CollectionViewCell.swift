@@ -65,7 +65,7 @@ open class CollectionViewCell: UICollectionViewCell {
       let itemsPerRow = Int(1 / value)
       if itemsPerRow > 1 {
         let minimumInteritemSpacing = (collectionView.delegate as? UICollectionViewDelegateFlowLayout)?.collectionView?(collectionView, layout: flowLayout, minimumInteritemSpacingForSectionAt: section) ?? flowLayout.minimumInteritemSpacing
-        width = ((parentSize.width - minimumInteritemSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow)).flooredToScreenScale
+        width = floor((parentSize.width - minimumInteritemSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
       } else {
         width = parentSize.width * value
       }

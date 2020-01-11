@@ -8,11 +8,6 @@ extension CGFloat {
     let scale = UIScreen.main.scale
     return ceil(self * scale) / scale
   }
-  
-  @inlinable var flooredToScreenScale: CGFloat {
-    let scale = UIScreen.main.scale
-    return floor(self * scale) / scale
-  }
 }
 
 extension UIEdgeInsets {
