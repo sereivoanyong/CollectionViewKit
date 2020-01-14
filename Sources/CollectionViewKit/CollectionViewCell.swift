@@ -87,7 +87,7 @@ open class CollectionViewCell: UICollectionViewCell {
       if let lastEstimatedSize = lastEstimatedSize {
         height = lastEstimatedSize.height
       } else {
-        height = contentView.systemLayoutSizeFitting(CGSize(width: width, height: 0), withHorizontalFittingPriority: .defaultHigh, verticalFittingPriority: .defaultHigh).height
+        height = contentView.systemLayoutSizeFitting(CGSize(width: width, height: 0), withHorizontalFittingPriority: .defaultHigh, verticalFittingPriority: .fittingSizeLevel).height
       }
     }
     layoutAttributes.size = CGSize(width: width, height: height)
